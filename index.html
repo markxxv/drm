@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0c0c0e">
+  <meta name="description" content="DRM — a minimal nine-pad drum instrument with ABC sequencing.">
+  <title>DRM — Drum Machine</title>
+  <style>
+    :root{color-scheme:dark;--bg:#0c0c0e;--dim:#88888e;--white:#e9e9e8;--muted:#5f6067}
+    *{box-sizing:border-box}
+    html{min-height:100%;background:var(--bg)}
+    body{margin:0;min-height:100dvh;background:radial-gradient(ellipse 105% 48% at 50% -15%,#232328 0%,transparent 86%),var(--bg);color:var(--white);font:400 14px/1.4 -apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;-webkit-font-smoothing:antialiased}
+    button,textarea{font:inherit}
+    button{-webkit-tap-highlight-color:transparent;touch-action:manipulation;cursor:pointer}
+    .app{width:min(100%,680px);margin:auto;padding:clamp(18px,4vw,36px) clamp(16px,4vw,30px) 46px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:30px}
+    .brand{font-size:19px;font-weight:750;letter-spacing:-1.2px}
+    .brand span{color:#64646b}
+    .transport{display:flex;align-items:center;gap:8px}
+    .bpm{font-variant-numeric:tabular-nums;color:#aaaab1;font-size:11px;letter-spacing:.06em;margin-right:8px}
+    .ctrl{background:#1b1b20;border:0;color:#cacacf;min-width:39px;height:39px;padding:0 14px;border-radius:12px;box-shadow:inset 0 1px 1px #ffffff0d,0 3px 9px #0006;font-weight:600;font-size:11px;letter-spacing:.05em}
+    .ctrl:active{transform:translateY(1px)}
+    .ctrl.play{background:#d9dadc;color:#0b0b0d;padding:0 17px}
+    .ctrl.play.playing{background:#d78f75;color:#20120e}
+    .ctrl.loop.active{color:#dcdce2}
+    .pad-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(9px,2vw,14px)}
+    .pad{position:relative;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;aspect-ratio:1.13/1;min-height:103px;padding:17px;background:linear-gradient(155deg,#25252a 0%,#1c1c20 48%,#151518 100%);border:0;border-radius:19px;color:#d0d0d4;box-shadow:inset 1px 1px 1px #ffffff13,inset -2px -3px 6px #0007,0 3px 0 #09090a,0 11px 17px #0006;transition:background .1s,transform .08s,box-shadow .1s;user-select:none;-webkit-user-select:none}
+    .pad::after{position:absolute;content:"";inset:4px;border-radius:15px;box-shadow:inset 0 1px 1px #ffffff07;pointer-events:none}
+    .pad:focus-visible,.ctrl:focus-visible,textarea:focus-visible{outline:2px solid #b8a2a0;outline-offset:3px}
+    .pad .note{font-size:11px;letter-spacing:.03em;color:#74747c;font-variant-numeric:tabular-nums}
+    .pad .name{font-size:clamp(12px,2.6vw,15px);font-weight:560;letter-spacing:-.015em}
+    .pad .lamp{position:absolute;right:17px;top:17px;width:5px;height:5px;background:#55555d;border-radius:50%;box-shadow:0 0 0 transparent;transition:.07s}
+    .pad.hit,.pad:active{transform:translateY(2px);background:linear-gradient(160deg,#333037,#27252a 65%,#1b191e);box-shadow:inset 1px 3px 8px #0009,inset 0 1px 1px #ffffff13,0 1px 0 #070707}
+    .pad.hit .lamp,.pad:active .lamp{background:#f0a38b;box-shadow:0 0 9px 3px #e7816b7a}
+    .editor-head{margin-top:31px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+    .editor-head label{color:#c3c3c7;font-size:11px;font-weight:700;letter-spacing:.15em}
+    .editor-actions{display:flex;gap:15px;align-items:center}
+    .text-btn{border:0;background:none;color:#888890;padding:3px 0;font-size:11px}
+    .text-btn:active{color:white}
+    .editor-wrap{background:#141417;border-radius:17px;box-shadow:inset 0 1px 0 #ffffff0a,0 6px 18px #0002;overflow:hidden}
+    textarea{display:block;width:100%;min-height:205px;resize:vertical;background:transparent;border:0;outline:none;color:#c5c5ca;padding:18px 19px;font:12px/1.8 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;tab-size:2;letter-spacing:0}
+    textarea::selection{background:#665452}
+    .foot{display:flex;gap:15px;align-items:center;justify-content:space-between;margin-top:10px;color:#696970;font-size:10px;letter-spacing:.01em}
+    #status{text-align:right;min-height:15px}
+    @media(max-width:500px){.app{padding:18px 14px 42px}header{margin-bottom:22px}.pad-grid{gap:9px}.pad{min-height:98px;aspect-ratio:1/1.04;border-radius:15px;padding:13px}.pad::after{border-radius:11px}.pad .lamp{right:13px;top:13px}.editor-head{margin-top:27px}.bpm{margin-right:2px}.transport{gap:6px}.ctrl{height:36px;min-width:36px;padding:0 10px}textarea{font-size:11px;padding:14px;min-height:190px}.foot span:first-child{max-width:55%}}
+    @media(prefers-reduced-motion:reduce){.pad,.ctrl,.pad .lamp{transition:none}}
+  </style>
+</head>
+<body>
+<main class="app">
+  <header>
+    <div class="brand">DRM<span>.</span></div>
+    <div class="transport">
+      <span class="bpm" id="bpm">71 BPM</span>
+      <button class="ctrl loop active" id="loop" type="button" aria-pressed="true" title="Loop on/off">↻</button>
+      <button class="ctrl" id="stop" type="button" title="Stop" aria-label="Stop">■</button>
+      <button class="ctrl play" id="play" type="button" aria-label="Play">▶</button>
+    </div>
+  </header>
+  <section class="pad-grid" id="pads" aria-label="Drum pads"></section>
+  <section aria-label="ABC sequencer">
+    <div class="editor-head"><label for="abc">ABC SEQUENCER</label><div class="editor-actions"><button class="text-btn" id="reset" type="button">Reset</button></div></div>
+    <div class="editor-wrap"><textarea id="abc" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="ABC notation"></textarea></div>
+    <div class="foot"><span>Notes = pads · Keys 1–9</span><span id="status" role="status"></span></div>
+  </section>
+</main>
+<script>
+"use strict";
+const DEFAULT_ABC = `X:1
+T:Lamp · rhythm study
+M:4/4
+L:1/16
+Q:1/4=71
+K:C
+[CE] E A E [DE] E A E | [CE] E [FE] E [DE] E A E |
+[CE] E A E [DE] E A E | [BE] E E z [DE] E A E |
+[CE] E A E [DE] E A E | [CE] E [FE] E [GE] E A E |
+[CE] E A E [DE] E A E | [BE] E E E [DE] E A E |`;
+const PAD_DEFS=[
+  {note:"E",name:"Hat",file:"hat",rate:1,gain:0.80,cut:0},
+  {note:"A",name:"Soft Hat",file:"hat",rate:0.91,gain:0.38,cut:0.11},
+  {note:"d",name:"Sharp Hat",file:"hat",rate:1.22,gain:0.63,cut:0.085},
+  {note:"D",name:"Snare",file:"snare",rate:1,gain:0.91,cut:0},
+  {note:"G",name:"Low Snare",file:"snare",rate:0.84,gain:0.86,cut:0},
+  {note:"c",name:"High Snare",file:"snare",rate:1.18,gain:0.78,cut:0},
+  {note:"C",name:"Kick",file:"kick",rate:1,gain:0.96,cut:0},
+  {note:"F",name:"Low Kick",file:"kick",rate:0.81,gain:0.86,cut:0},
+  {note:"B",name:"Tight Kick",file:"kick",rate:1.17,gain:0.85,cut:0.28}
+];
+const SAMPLES={kick:"./samples/kick.mp3",snare:"./samples/snare.mp3",hat:"./samples/hat.mp3"};
+const $=id=>document.getElementById(id);
+const abcEl=$("abc"),padEl=$("pads"),playEl=$("play"),loopEl=$("loop"),statusEl=$("status");
+let ctx=null,buffers={},playing=false,loop=true,scheduleTimer=null,events=[],index=0,barStart=0,stepTime=0,length=0;
+const activeSources=new Set(),padButtons=new Map();
+try{abcEl.value=localStorage.getItem("drm.abc.v1")||DEFAULT_ABC}catch{abcEl.value=DEFAULT_ABC}
+for(let i=0;i<PAD_DEFS.length;i++){
+  const p=PAD_DEFS[i],button=document.createElement("button");
+  button.className="pad";button.type="button";button.setAttribute("aria-label",p.name+" ("+p.note+")");
+  const n=document.createElement("span");n.className="note";n.textContent=p.note;
+  const lamp=document.createElement("span");lamp.className="lamp";lamp.setAttribute("aria-hidden","true");
+  const label=document.createElement("span");label.className="name";label.textContent=p.name;
+  button.append(n,lamp,label);button.addEventListener("click",()=>trigger(p.note));
+  padButtons.set(p.note,button);padEl.appendChild(button);
+}
+let preload=null;
+async function audio(){
+  if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();
+  if(ctx.state!=="running")await ctx.resume();
+  if(!preload){
+    preload=Promise.all(Object.entries(SAMPLES).map(async([key,url])=>{
+      const response=await fetch(url);
+      if(!response.ok)throw new Error("Sample "+key+" unavailable");
+      buffers[key]=await ctx.decodeAudioData(await response.arrayBuffer());
+    })).catch(err=>{preload=null;statusEl.textContent=err.message;throw err});
+  }
+  await preload;return ctx;
+}
+function flash(note,delay=0){
+  const button=padButtons.get(note);if(!button)return;
+  window.setTimeout(()=>{button.classList.add("hit");window.setTimeout(()=>button.classList.remove("hit"),105)},Math.max(0,delay*1000));
+}
+function sound(note,when){
+  const p=PAD_DEFS.find(p=>p.note===note);if(!p||!ctx||!buffers[p.file])return;
+  const source=ctx.createBufferSource(),gain=ctx.createGain(),start=Math.max(ctx.currentTime,when);
+  source.buffer=buffers[p.file];source.playbackRate.value=p.rate;
+  gain.gain.value=p.gain;source.connect(gain);gain.connect(ctx.destination);
+  source.start(start);
+  if(p.cut){const end=start+Math.min(p.cut,source.buffer.duration/p.rate);gain.gain.setValueAtTime(p.gain,end-0.015);gain.gain.exponentialRampToValueAtTime(0.001,end);source.stop(end+0.01)}
+  activeSources.add(source);source.onended=()=>{activeSources.delete(source);source.disconnect();gain.disconnect()};
+  flash(note,start-ctx.currentTime);
+}
+async function trigger(note){try{await audio();sound(note,ctx.currentTime)}catch(err){statusEl.textContent=err.message}}
+function readMultiplier(input,pos){
+  const match=/^(\d+)?(\/{1,2}\d*)?/.exec(input.slice(pos))[0];
+  if(!match)return[1,pos];
+  let value=1;
+  const m=/^(\d+)?(\/\/|\/\d*|)$/.exec(match);
+  if(m){if(m[1])value=Number(m[1]);if(m[2])value/=m[2]==="//"?4:(m[2].length===1?2:Number(m[2].slice(1))||2)}
+  return[value,pos+match.length];
+}
+function parseABC(text){
+  const q=/^Q:\s*(?:(?:1\/\d+)\s*=\s*)?(\d+)/mi.exec(text);
+  const l=/^L:\s*1\/(\d+)/mi.exec(text);
+  const tempo=q?Math.max(25,Math.min(280,Number(q[1]))):71;
+  const denom=l?Number(l[1]):16;
+  const unit=60/tempo*4/denom;
+  const body=text.split("\n").filter(line=>!/^\s*[A-Za-z]:/.test(line)&&!/^\s*%/.test(line)).join(" ").replace(/%[^\n]*/g," ");
+  let pos=0,t=0;const notes=[];
+  while(pos<body.length){
+    const char=body[pos];
+    if(char==="[" && !/^\[\d/.test(body.slice(pos))){
+      const close=body.indexOf("]",pos+1);
+      if(close>pos){const ns=[...body.slice(pos+1,close)].filter(n=>padButtons.has(n));pos=close+1;const [n,next]=readMultiplier(body,pos);pos=next;if(ns.length)notes.push({t,ns});t+=n;continue}
+    }
+    if(/[A-Ga-gzZ]/.test(char)){
+      pos++;while(/[',]/.test(body[pos]||" "))pos++;
+      const [n,next]=readMultiplier(body,pos);pos=next;
+      if(padButtons.has(char))notes.push({t,ns:[char]});
+      t+=n;continue;
+    }
+    pos++;
+  }
+  return{notes,tempo,unit,steps:t};
+}
+function setPlaying(state){playing=state;playEl.textContent=state?"❚❚":"▶";playEl.classList.toggle("playing",state);playEl.setAttribute("aria-label",state?"Pause":"Play")}
+function stop(){
+  clearInterval(scheduleTimer);scheduleTimer=null;setPlaying(false);
+  for(const source of activeSources){try{source.stop()}catch{}}
+  activeSources.clear();
+}
+function schedule(){
+  if(!playing||!events.length)return;
+  const horizon=ctx.currentTime+0.16;
+  let guard=0;
+  while(playing&&guard++<64){
+    const ev=events[index],at=barStart+ev.t*stepTime;
+    if(at>horizon)break;
+    if(at>=ctx.currentTime-0.05)ev.ns.forEach(n=>sound(n,at));
+    index++;
+    if(index>=events.length){
+      if(!loop){clearInterval(scheduleTimer);scheduleTimer=null;const finish=Math.max(0,(barStart+length*stepTime-ctx.currentTime)*1000);window.setTimeout(()=>{if(playing)setPlaying(false)},finish);break}
+      index=0;barStart+=length*stepTime;
+    }
+  }
+}
+async function play(){
+  if(playing){stop();return}
+  const result=parseABC(abcEl.value);
+  $("bpm").textContent=result.tempo+" BPM";
+  if(!result.notes.length||!result.steps){statusEl.textContent="No playable notes";return}
+  try{await audio()}catch{return}
+  events=result.notes;index=0;stepTime=result.unit;length=result.steps;
+  barStart=ctx.currentTime+0.06;setPlaying(true);statusEl.textContent="";
+  schedule();scheduleTimer=setInterval(schedule,25);
+}
+playEl.addEventListener("click",play);$("stop").addEventListener("click",stop);
+loopEl.addEventListener("click",()=>{loop=!loop;loopEl.classList.toggle("active",loop);loopEl.setAttribute("aria-pressed",String(loop))});
+$("reset").addEventListener("click",()=>{stop();abcEl.value=DEFAULT_ABC;try{localStorage.setItem("drm.abc.v1",DEFAULT_ABC)}catch{};$("bpm").textContent="71 BPM";statusEl.textContent="Reset"});
+abcEl.addEventListener("input",()=>{stop();try{localStorage.setItem("drm.abc.v1",abcEl.value)}catch{};const r=parseABC(abcEl.value);$("bpm").textContent=r.tempo+" BPM";statusEl.textContent="Saved"});
+document.addEventListener("keydown",e=>{
+  if(e.target.closest("textarea,input")||e.ctrlKey||e.metaKey||e.altKey||e.repeat)return;
+  if(e.code==="Space"){e.preventDefault();play();return}
+  const i=Number(e.key)-1;if(i>=0&&i<9)trigger(PAD_DEFS[i].note);
+});
+$("bpm").textContent=parseABC(abcEl.value).tempo+" BPM";
+</script>
+</body>
+</html>
