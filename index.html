@@ -88,7 +88,7 @@ const PAD_DEFS=[
   {note:"F",name:"Low Kick",file:"kick",rate:0.81,gain:0.86,cut:0},
   {note:"B",name:"Tight Kick",file:"kick",rate:1.17,gain:0.85,cut:0.28}
 ];
-const SAMPLES={kick:"./samples/kick.mp3",snare:"./samples/snare.mp3",hat:"./samples/hat.mp3"};
+const SAMPLES={kick:"./Kik_resonate.wav",snare:"./Snare_Industrial.wav",hat:"./Hat.wav"};
 const $=id=>document.getElementById(id);
 const abcEl=$("abc"),padEl=$("pads"),playEl=$("play"),loopEl=$("loop"),statusEl=$("status");
 let ctx=null,buffers={},playing=false,loop=true,scheduleTimer=null,events=[],index=0,barStart=0,stepTime=0,length=0;
