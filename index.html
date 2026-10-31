@@ -67,7 +67,7 @@
 </main>
 <script>
 "use strict";
-const DEFAULT_ABC = `X:1
+const LEGACY_DEFAULT_ABC = `X:1
 T:Lamp · rhythm study
 M:4/4
 L:1/16
@@ -77,10 +77,20 @@ K:C
 [CE] E A E [DE] E A E | [BE] E E z [DE] E A E |
 [CE] E A E [DE] E A E | [CE] E [FE] E [GE] E A E |
 [CE] E A E [DE] E A E | [BE] E E E [DE] E A E |`;
+const DEFAULT_ABC = `X:1
+T:Lamp Lady · syncopated groove study
+M:4/4
+L:1/16
+Q:1/4=71
+K:C
+[CE] A/2 B/2 E A  [Dd] A/2 C/2 [BE]/2 A/2 A  E A E [CA]/2 B/2  [Dd] A E A/4 d/4 A/4 d/4 |
+[CE] A d/2 B/2 [CA]/2 d/2  [DE] A [FE] A  E A d/2 C/2 [BA]/4 d/4 A/4 d/4  [DE] A E/2 C/2 A |
+[CE] A E [BA]/2 C/2  [Dd] A E/2 B/2 A/4 d/4 A/4 d/4  E A E [CA]/2 B/2  [Dd] A [FE]/2 d/2 A |
+[CE] [BA] E A  [DE] [CA]/2 [Bd]/2 d A  E A [CE]/2 B/2 A  [DE] A/4 d/4 A/4 d/4 [Cd]/2 B/2 A/2 d/2 |`;
 const PAD_DEFS=[
-  {note:"E",name:"Hat",file:"hat",rate:1,gain:0.80,cut:0},
-  {note:"A",name:"Soft Hat",file:"hat",rate:0.91,gain:0.38,cut:0.11},
-  {note:"d",name:"Sharp Hat",file:"hat",rate:1.22,gain:0.63,cut:0.085},
+  {note:"E",name:"Hat",file:"hat",rate:1,gain:0.80,cut:0.13},
+  {note:"A",name:"Soft Hat",file:"hat",rate:0.91,gain:0.38,cut:0.08},
+  {note:"d",name:"Sharp Hat",file:"hat",rate:1.22,gain:0.63,cut:0.065},
   {note:"D",name:"Snare",file:"snare",rate:1,gain:0.91,cut:0},
   {note:"G",name:"Low Snare",file:"snare",rate:0.84,gain:0.86,cut:0},
   {note:"c",name:"High Snare",file:"snare",rate:1.18,gain:0.78,cut:0},
@@ -93,7 +103,11 @@ const $=id=>document.getElementById(id);
 const abcEl=$("abc"),padEl=$("pads"),playEl=$("play"),loopEl=$("loop"),statusEl=$("status");
 let ctx=null,buffers={},playing=false,loop=true,scheduleTimer=null,events=[],index=0,barStart=0,stepTime=0,length=0;
 const activeSources=new Set(),padButtons=new Map();
-try{abcEl.value=localStorage.getItem("drm.abc.v1")||DEFAULT_ABC}catch{abcEl.value=DEFAULT_ABC}
+try{
+  const saved=localStorage.getItem("drm.abc.v1");
+  abcEl.value=saved&&saved!==LEGACY_DEFAULT_ABC?saved:DEFAULT_ABC;
+  if(saved===LEGACY_DEFAULT_ABC)localStorage.setItem("drm.abc.v1",DEFAULT_ABC);
+}catch{abcEl.value=DEFAULT_ABC}
 for(let i=0;i<PAD_DEFS.length;i++){
   const p=PAD_DEFS[i],button=document.createElement("button");
   button.className="pad";button.type="button";button.setAttribute("aria-label",p.name+" ("+p.note+")");
