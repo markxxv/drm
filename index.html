@@ -104,15 +104,48 @@ for(let i=0;i<PAD_DEFS.length;i++){
   padButtons.set(p.note,button);padEl.appendChild(button);
 }
 let preload=null;
+function fallbackSample(kind){
+  const sampleRate=ctx.sampleRate;
+  const duration=kind==="kick" ? .65 : kind==="snare" ? .32 : .15;
+  const buffer=ctx.createBuffer(1,Math.ceil(sampleRate*duration),sampleRate);
+  const data=buffer.getChannelData(0);
+  let seed=19317;
+  let phase=0,highPass=0,previousNoise=0;
+  for(let i=0;i<data.length;i++){
+    const t=i/sampleRate;
+    seed=(1664525*seed+1013904223)>>>0;
+    const noise=(seed/2147483648)-1;
+    let value=0;
+    if(kind==="kick"){
+      const frequency=48+135*Math.exp(-t*42);
+      phase+=2*Math.PI*frequency/sampleRate;
+      value=Math.sin(phase)*Math.exp(-t*11)+.12*noise*Math.exp(-t*80);
+    }else if(kind==="snare"){
+      phase+=2*Math.PI*175/sampleRate;
+      value=(.75*noise+.25*Math.sin(phase))*Math.exp(-t*19);
+    }else{
+      highPass=.87*(highPass+noise-previousNoise);
+      previousNoise=noise;
+      value=highPass*.65*Math.exp(-t*60);
+    }
+    data[i]=Math.max(-1,Math.min(1,value));
+  }
+  return buffer;
+}
 async function audio(){
   if(!ctx)ctx=new (window.AudioContext||window.webkitAudioContext)();
   if(ctx.state!=="running")await ctx.resume();
   if(!preload){
     preload=Promise.all(Object.entries(SAMPLES).map(async([key,url])=>{
-      const response=await fetch(url);
-      if(!response.ok)throw new Error("Sample "+key+" unavailable");
-      buffers[key]=await ctx.decodeAudioData(await response.arrayBuffer());
-    })).catch(err=>{preload=null;statusEl.textContent=err.message;throw err});
+      try{
+        const response=await fetch(url,{cache:"no-store"});
+        if(!response.ok)throw new Error("HTTP "+response.status);
+        buffers[key]=await ctx.decodeAudioData(await response.arrayBuffer());
+      }catch(err){
+        console.warn("Using fallback audio for",key,err);
+        buffers[key]=fallbackSample(key);
+      }
+    }));
   }
   await preload;return ctx;
 }
